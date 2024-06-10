@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 from matplotlib import pyplot as plt
 import heapq
+import os
 
 def kmeans_segmentation(image_path, k):
     image = cv2.imread(image_path)
@@ -75,21 +76,33 @@ def calculate_metrics(original_labels, refined_labels):
     union = np.prod(original_labels.shape)
     return 2 * intersection / (union + intersection), intersection / union
 
-# Path to image and parameters
-image_path = 'peppers512warna.bmp'
+# Path to directory and parameters
+directory_path = 'test'
 k = 3
 
-# Process image
-original_image, segmented_image, segmented_labels, centers = kmeans_segmentation(image_path, k)
+# Iterate through all files in the directory
+for filename in os.listdir(directory_path):
+    if filename.endswith(('.png', '.jpg', '.jpeg', '.bmp')):
+        image_path = os.path.join(directory_path, filename)
+        
+        # Process image
+        original_image, segmented_image, segmented_labels, centers = kmeans_segmentation(image_path, k)
+        
+        # Refine segmentation
+        refined_image_a, refined_labels_a = refine_labels(segmented_image, segmented_labels, 'A*')
+        
+        # Calculate metrics
+        dice_a, jaccard_a = calculate_metrics(segmented_labels, refined_labels_a)
+        
+        # Visualization
+        fig, axes = plt.subplots(1, 2, figsize=(20, 5))
+        axes[0].imshow(original_image)
+        axes[0].set_title('Original Image')
+        axes[1].imshow(refined_image_a)
+        axes[1].set_title(f'A* Refinement\nDice: {dice_a:.4f}, Jaccard: {jaccard_a:.4f}')
+        
+        # Save the figure
+        plt.savefig(f'results/{filename}_result.png')
+        plt.close()
 
-# Refine segmentation
-refined_image_a, refined_labels_a = refine_labels(segmented_image, segmented_labels, 'A*')
-
-# Calculate metrics
-dice_a, jaccard_a = calculate_metrics(segmented_labels, refined_labels_a)
-
-# Visualization
-fig, axes = plt.subplots(1, 2, figsize=(20, 5))
-axes[0].imshow(original_image), axes[0].set_title('Original Image')
-axes[1].imshow(refined_image_a), axes[1].set_title(f'A* Refinement\nDice: {dice_a:.4f}, Jaccard: {jaccard_a:.4f}')
-plt.show()
+        print(f'Processed {filename}: Dice Coefficient: {dice_a:.4f}, Jaccard Index: {jaccard_a:.4f}')
